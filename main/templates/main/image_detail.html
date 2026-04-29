@@ -1,0 +1,28 @@
+{% extends 'main/liberty.html' %}
+
+{% block title %}
+    Просмотр изображения
+{% endblock %}
+
+{% block content %}
+    <div class="features">
+        <h1>Поиск картинки</h1>
+        <form method="post">
+            {% csrf_token %}
+
+            <input type="text" name="query" placeholder="Введите id или имя картинки">
+
+            <button type="submit">Найти</button>
+        </form>
+
+        {% if error %}
+            <p style="color: red;">{{ error }}</p>
+        {% endif %}
+
+        {% if image %}
+            <h2>{{ image.original_name }}</h2>
+
+            <img src="{{ image.image.url }}" width="300">
+        {% endif %}
+    </div>
+{% endblock %}

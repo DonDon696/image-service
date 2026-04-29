@@ -1,0 +1,26 @@
+{% extends 'main/liberty.html' %}
+
+{% block title %}
+    Удаление изображения
+{% endblock %}
+
+{% block content %}
+    <div class="features">
+        <h1>Удаление картинки</h1>
+        <form method="post">
+            {% csrf_token %}
+
+            <input type="text" name="query" placeholder="Введите id картинки">
+
+            <button type="submit">Удалить</button>
+        </form>
+
+        {% if message %}
+            <p style="color: green;">{{ message }}</p>
+        {% endif %}
+
+        {% if error %}
+            <p style="color: red;">{{ error }}</p>
+        {% endif %}
+    </div>
+{% endblock %}

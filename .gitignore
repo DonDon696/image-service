@@ -1,0 +1,23 @@
+# env
+.env
+
+# python
+__pycache__/
+*.pyc
+
+# virtualenv
+.venv/
+
+# IDE
+.idea/
+.vscode/
+
+# db
+db.sqlite3
+
+# media / uploads
+uploads/
+
+# coverage
+htmlcov/
+.coverage

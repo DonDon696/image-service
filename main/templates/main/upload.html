@@ -1,0 +1,19 @@
+{% extends 'main/liberty.html' %}
+
+{% block title %}
+    Загрузка изображения
+{% endblock %}
+
+{% block content %}
+    <div class="features">
+        <h1>Загрузка изображения</h1>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <p>
+                <input type="file" name="image">
+            </p>
+            <button class="btn btn-danger">Загрузка</button>
+        </form>
+
+    </div>
+{% endblock %}
