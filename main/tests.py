@@ -1,126 +1,122 @@
+import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.handlers.exception import response_for_exception
-from django.test import TestCase
-
 from .models import UploadImage
+from pytest import fixture
+from django.urls import reverse
+
+@fixture
+def file_image():
+    file = SimpleUploadedFile(
+        name='test.jpg',
+        content=b'hello',
+        content_type='image/jpeg'
+    )
+    return file
+
+def test_index(client):
+    response = client.get(reverse('index'))
+
+    assert response.status_code == 200
 
 
-class TestApi(TestCase):
-    def test_api_upload_image(self):
-        file = SimpleUploadedFile(
-            name='test.jpg',
-            content=b'content',
-            content_type='image/jpeg'
-        )
+@pytest.mark.django_db
+def test_upload_positive(client, file_image):
+    response = client.post('/upload/', {'image': file_image})
+    assert response.status_code == 200
 
-        response = self.client.post('/api/images/', {'image': file})
+    assert UploadImage.objects.count() == 1
 
-        self.assertEqual(response.status_code, 201)
+    obj = UploadImage.objects.first()
+    assert obj.original_name == file_image.name
 
-        data = response.json()
+@pytest.mark.django_db
+def test_upload_negative(client):
+    response = client.post('/upload/', {})
 
-        self.assertIn('id', data)
-        self.assertEqual(data['original_name'], 'test.jpg')
-        self.assertEqual(UploadImage.objects.count(), 1)
+    assert response.status_code == 200
+    assert UploadImage.objects.count() == 0
 
-        image_obj = UploadImage.objects.first()
-        self.assertEqual(image_obj.original_name, 'test.jpg')
+@pytest.mark.django_db
+def test_upload_not_post(client, file_image):
+    response = client.get('/upload/', {'image': file_image})
+    assert response.status_code == 200
+    assert UploadImage.objects.count() == 0
 
-    def test_api_upload_no_file(self):
 
-        response = self.client.post('/api/images/', {})
+@pytest.mark.django_db
+def test_image_detail_positive(client, file_image):
+    obj = UploadImage.objects.create(original_name= file_image.name, image= file_image)
 
-        self.assertEqual(response.status_code, 400)
+    response = client.post('/image_detail/', {'query': str(obj.id)})
 
-        data = response.json()
+    assert response.status_code == 200
+    assert response.context['image'] == obj
+    assert response.context['error'] is None
 
-        self.assertEqual(data['error'], 'Нет такого файла')
-        self.assertEqual(UploadImage.objects.count(), 0)
+@pytest.mark.django_db
+def test_image_detail_positive_name(client, file_image):
+    obj = UploadImage.objects.create(original_name= file_image.name, image= file_image)
 
-    def test_api_upload_no_post(self):
-        response = self.client.get('/api/images/')
+    response = client.post('/image_detail/', {'query': obj.original_name})
 
-        self.assertEqual(response.status_code, 405)
+    assert response.status_code == 200
+    assert response.context['image'] == obj
+    assert response.context['error'] is None
 
-        data = response.json()
-        self.assertEqual(data['error'], 'Метод не разрешен')
+@pytest.mark.django_db
+def test_image_detail_negative(client):
+    response = client.post('/image_detail/', {'query': '999'})
+    assert response.status_code == 200
+    assert response.context['image'] is None
+    assert response.context['error'] is not None
 
-    def test_api_get_image(self):
-        file = SimpleUploadedFile(
-            name='file.jpg',
-            content=b'content',
-            content_type='image/jpeg'
-        )
+@pytest.mark.django_db
+def test_image_detail_negative_name(client):
+    response = client.post('/image_detail/', {'query': 'none.jpg'})
+    assert response.status_code == 200
+    assert response.context['image'] is None
+    assert response.context['error'] is not None
 
-        image = UploadImage.objects.create(
-            original_name= file.name,
-            image=file
-        )
-        response = self.client.get(f'/api/images/{image.id}/')
+def test_image_detail_not_post(client):
+    response = client.get('/image_detail/')
 
-        self.assertEqual(response.status_code, 200)
+    assert response.status_code == 200
+    assert response.context['image'] is None
+    assert response.context['error'] is None
 
-        data = response.json()
 
-        self.assertIn('id', data)
-        self.assertEqual(data['original_name'], 'file.jpg')
-        self.assertIn('image_url', data)
-        self.assertEqual(data['id'], image.id)
+@pytest.mark.django_db
+def test_delete_positive(client, file_image):
+    obj = UploadImage.objects.create(original_name=file_image.name, image=file_image)
 
-    def test_api_get_image_no_found(self):
-        response = self.client.get('/api/images/99/')
+    response = client.post('/delete/', {'query': str(obj.id)})
 
-        self.assertEqual(response.status_code, 404)
+    assert UploadImage.objects.count() == 0
+    assert response.status_code == 200
+    assert response.context['message'] == 'Картинка удалена'
+    assert response.context['error'] is None
 
-        data = response.json()
+@pytest.mark.django_db
+def test_delete_negative(client, file_image):
+    obj = UploadImage.objects.create(original_name=file_image.name, image=file_image)
 
-        self.assertEqual(data['error'], 'Картинки не существует')
+    assert UploadImage.objects.count() == 1
 
-    def test_api_no_get(self):
-        response = self.client.post('/api/images/99/')
+    response = client.post('/delete/', {'query': '999'})
 
-        self.assertEqual(response.status_code, 405)
+    assert UploadImage.objects.count() == 1
+    assert UploadImage.objects.first().id == obj.id
+    assert response.status_code == 200
+    assert response.context['error'] == 'Картинка не найдена'
+@pytest.mark.django_db
+def test_delete_not_post(client, file_image):
+    obj = UploadImage.objects.create(original_name=file_image.name, image=file_image)
+    assert UploadImage.objects.count() == 1
 
-        data = response.json()
+    response = client.get('/delete/')
 
-        self.assertEqual(data['error'], 'Метод не разрешен')
-
-    def test_api_delete_image(self):
-        file = SimpleUploadedFile(
-            name='file.jpg',
-            content=b'content',
-            content_type='image/jpeg'
-        )
-        image = UploadImage.objects.create(
-            original_name= file.name,
-            image=file
-        )
-
-        response = self.client.delete(f'/api/images/{image.id}/delete/')
-
-        self.assertEqual(response.status_code, 200)
-
-        data = response.json()
-
-        self.assertEqual(data['message'], 'Картинка удалена')
-        self.assertEqual(data['original_name'], 'file.jpg')
-        self.assertEqual(data['id'], image.id)
-        self.assertEqual(UploadImage.objects.count(), 0)
-
-    def test_api_delete_image_no_found(self):
-        response = self.client.delete('/api/images/99/delete/')
-
-        self.assertEqual(response.status_code, 404)
-
-        data = response.json()
-
-        self.assertEqual(data['error'], 'Картинка не найдена')
-
-    def test_api_no_delete(self):
-        response = self.client.get('/api/images/99/delete/')
-
-        self.assertEqual(response.status_code, 405)
-
-        data = response.json()
-
-        self.assertEqual(data['error'], 'Метод не разрешен')
+    assert response.status_code == 200
+    assert UploadImage.objects.count() == 1
+    assert response.context['message'] is None
+    assert response.context['error'] is None
+    assert UploadImage.objects.first().id == obj.id

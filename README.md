@@ -58,10 +58,3 @@ pycache
 загруженные изображения
 
 ---
-
-## 🚀 После этого
-
-```bash
-git add README.md
-git commit -m "Add README"
-git push

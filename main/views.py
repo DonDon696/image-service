@@ -1,5 +1,4 @@
-from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render
 from .models import UploadImage
 import logging
 
@@ -64,56 +63,4 @@ def delete(request):
 
     return render(request, 'main/delete.html', {'error': error, 'message': message})
 
-def api_upload_image(request):
-    if request.method == "POST":
-        image = request.FILES.get('image')
-
-        if not image:
-            logger.warning("API: файл не передан при загрузке")
-            return JsonResponse({'error': 'Нет такого файла'}, status=400)
-
-
-        obj = UploadImage.objects.create(original_name=image.name, image=image)
-
-        logger.info("API: изображение загружено: id=%s, имя=%s", obj.id, obj.original_name)
-
-        return JsonResponse({'id': obj.id, 'original_name': obj.original_name, 'image_url': obj.image.url}, status=201)
-
-    logger.warning("API: неверный метод при загрузке: %s", request.method)
-
-    return JsonResponse({'error': 'Метод не разрешен'}, status=405)
-
-def api_get_image(request, image_id):
-    if request.method == 'GET':
-        image = UploadImage.objects.filter(id=image_id).first()
-
-        if image:
-            logger.info("API: запрос изображения: id=%s, имя=%s", image.id, image.original_name)
-
-            return JsonResponse({'id': image.id, 'original_name': image.original_name, 'image_url': image.image.url}, status=200)
-        else:
-            return JsonResponse({'error': 'Картинки не существует'}, status=404)
-
-    logger.warning("API: изображение не найдено: id=%s", image_id)
-
-    return JsonResponse({'error': 'Метод не разрешен'}, status=405)
-
-def api_delete_image(request, image_id):
-    if request.method != 'DELETE':
-        logger.warning("API: неверный метод удаления: %s", request.method)
-        return JsonResponse({'error': 'Метод не разрешен'}, status=405)
-
-    image = UploadImage.objects.filter(id=image_id).first()
-    if not image:
-        return JsonResponse({'error': 'Картинка не найдена'}, status=404)
-
-
-    image_id = image.id
-    original_name = image.original_name
-    image.image.delete(save=False)
-    image.delete()
-
-    logger.info("API: изображение удалено: id=%s, имя=%s", image_id, original_name)
-
-    return JsonResponse({'message': 'Картинка удалена', 'id': image_id, 'original_name': original_name})
 
