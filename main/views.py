@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import UploadImage
 import logging
 
@@ -18,6 +18,7 @@ def upload(request):
                 image=image
             )
             logger.info("Изображение загружено через форму: id=%s, имя=%s", obj.id, obj.original_name)
+            return redirect('upload')
         else:
             logger.warning("Ошибка загрузки через форму: файл не передан")
     return render(request, 'main/upload.html')
@@ -62,5 +63,7 @@ def delete(request):
                 logger.warning("Ошибка удаления (форма): изображение не найдено, запрос=%s", query)
 
     return render(request, 'main/delete.html', {'error': error, 'message': message})
+
+
 
 

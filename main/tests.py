@@ -4,7 +4,7 @@ from .models import UploadImage
 from pytest import fixture
 from django.urls import reverse
 
-@fixture
+@fixture(scope="session")
 def file_image():
     file = SimpleUploadedFile(
         name='test.jpg',
